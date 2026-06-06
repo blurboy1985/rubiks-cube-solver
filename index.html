@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rubik's Cube 3x3 Solver</title>
+  <meta name="description" content="Interactive 3D Rubik's Cube solver. Scramble or paint your cube, then watch a step-by-step solution." />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Rubik's Cube <span>3×3×3</span> Solver</h1>
+    <p class="tagline">Scramble or paint your cube, then solve it step by step.</p>
+  </header>
+
+  <main class="layout">
+    <section class="stage">
+      <div id="cube3d" class="cube3d"></div>
+      <p class="hint">Drag to rotate the cube</p>
+    </section>
+
+    <section class="panel">
+      <div class="actions">
+        <button id="scrambleBtn" class="btn primary">🔀 Scramble</button>
+        <button id="solveBtn" class="btn primary">✅ Solve</button>
+        <button id="resetBtn" class="btn">♻ Reset</button>
+        <button id="paintBtn" class="btn">🎨 Paint</button>
+      </div>
+
+      <div id="palette" class="palette" style="display:none"></div>
+      <p id="paintHint" class="paint-hint" style="display:none">
+        Pick a colour, then click stickers on the net below. Centre stickers are fixed.
+        Toggle Paint off when done.
+      </p>
+
+      <div id="status" class="status">Loading…</div>
+
+      <div class="net-wrap">
+        <div id="net" class="net"></div>
+      </div>
+
+      <div class="scramble-line">
+        <strong>Scramble:</strong> <code id="scrambleText">—</code>
+      </div>
+
+      <div class="solution">
+        <div class="solution-head">
+          <strong>Solution</strong> <span id="moveCount" class="muted"></span>
+        </div>
+        <div id="moves" class="moves"></div>
+        <div class="playback">
+          <button id="firstBtn" class="btn sm" title="First">⏮</button>
+          <button id="prevBtn" class="btn sm" title="Step back">◀</button>
+          <button id="playBtn" class="btn sm wide">▶ Play</button>
+          <button id="nextBtn" class="btn sm" title="Step forward">▶</button>
+          <button id="lastBtn" class="btn sm" title="Last">⏭</button>
+          <label class="speed">Speed
+            <input id="speed" type="range" min="1" max="5" value="3" />
+          </label>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>
+      Built with an open-source two-phase (Kociemba) solver. Move notation: U/D/L/R/F/B
+      with <code>'</code> = counter-clockwise, <code>2</code> = half turn.
+    </p>
+  </footer>
+
+  <script src="vendor/three.min.js"></script>
+  <script src="vendor/cube.js"></script>
+  <script src="js/cube3d.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
