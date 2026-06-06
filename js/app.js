@@ -3,18 +3,20 @@
   'use strict';
 
   const SOLVED = 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB';
+  const BLANK = 'U'.repeat(54); // all-white starting canvas
   const LETTERS = ['U', 'R', 'F', 'D', 'L', 'B'];
-  const FACE_LABELS = { U: 'Up', R: 'Right', F: 'Front', D: 'Down', L: 'Left', B: 'Back' };
+  const FACE_LABELS = { U: 'White', R: 'Red', F: 'Green', D: 'Yellow', L: 'Orange', B: 'Blue' };
+  const FACE_NAMES = { U: 'Up (top)', R: 'Right', F: 'Front', D: 'Down (bottom)', L: 'Left', B: 'Back' };
   const CENTER = { 0: 'U', 9: 'R', 18: 'F', 27: 'D', 36: 'L', 45: 'B' };
 
   // ---- state ----
-  let facelets = SOLVED;        // current displayed state
+  let facelets = BLANK;         // current displayed state
   let baseState = SOLVED;       // state at moment of solve (for playback)
   let solution = [];            // array of moves
   let stepIndex = 0;            // playback position (0..solution.length)
   let playing = false;
   let playTimer = null;
-  let paintMode = false;
+  let paintMode = true;
   let paintColor = 'U';
   let solverReady = false;
   let solveId = 0;
@@ -25,8 +27,8 @@
     const m = e.data;
     if (m.type === 'ready') {
       solverReady = true;
-      setStatus('Solver ready', 'ok');
       el('solveBtn').disabled = false;
+      setStatus('Ready — paint your cube, then press Solve', 'ok');
     } else if (m.type === 'solution') {
       onSolution(m.solution);
     } else if (m.type === 'error') {
@@ -83,12 +85,17 @@
 
   function onStickerClick(idx) {
     if (!paintMode) return;
-    if (idx in CENTER) return; // centers are fixed
+    paintSticker(idx);
+  }
+
+  // Paint a single facelet (used by both the 2D net and the 3D cube).
+  function paintSticker(idx) {
     const arr = facelets.split('');
     arr[idx] = paintColor;
     facelets = arr.join('');
     paintNet();
     window.Cube3D.setState(facelets);
+    clearSolution();
   }
 
   // ---- rendering ----
@@ -107,6 +114,7 @@
   function scramble() {
     stopPlay();
     clearSolution();
+    if (paintMode) togglePaint(); // leave paint mode; show a clean solvable cube
     const faces = ['U', 'D', 'L', 'R', 'F', 'B'];
     const suff = ['', "'", '2'];
     const moves = [];
@@ -118,6 +126,7 @@
       moves.push(f + suff[(Math.random() * 3) | 0]);
     }
     const seq = moves.join(' ');
+    facelets = SOLVED;          // always scramble from a solved cube
     applyMoves(seq);
     el('scrambleText').textContent = seq;
     render();
@@ -127,10 +136,11 @@
   function reset() {
     stopPlay();
     clearSolution();
-    facelets = SOLVED;
+    facelets = BLANK;
     el('scrambleText').textContent = '—';
     render();
-    setStatus('Solved cube', 'ok');
+    if (!paintMode) togglePaint();
+    else setStatus('Cleared — paint your cube', '');
   }
 
   // ---- validation ----
@@ -139,6 +149,8 @@
     for (const ch of str) counts[ch] = (counts[ch] || 0) + 1;
     for (const L of LETTERS)
       if (counts[L] !== 9) return 'Each colour must appear exactly 9 times (' + FACE_LABELS[L] + ': ' + (counts[L] || 0) + ').';
+    const centers = [4, 13, 22, 31, 40, 49].map((i) => str[i]);
+    if (new Set(centers).size !== 6) return 'The 6 centre stickers must each be a different colour.';
     try {
       const round = Cube.fromString(str).asString();
       if (round !== str) return 'That sticker arrangement is not a valid cube state.';
@@ -183,6 +195,7 @@
     stepIndex = 0;
     el('moves').innerHTML = '';
     el('moveCount').textContent = '';
+    updateInstruction();
     updatePlaybackButtons();
   }
 
@@ -206,6 +219,33 @@
       kids[i].classList.toggle('done', i < stepIndex);
       kids[i].classList.toggle('current', i === stepIndex);
     }
+    updateInstruction();
+  }
+
+  // Plain-English instruction for one move, e.g. "R'", "F2".
+  function describe(move) {
+    const face = move[0];
+    const name = FACE_NAMES[face];
+    let dir;
+    if (move.indexOf('2') >= 0) dir = 'a half turn (180°)';
+    else if (move.indexOf("'") >= 0) dir = 'counter-clockwise (90°)';
+    else dir = 'clockwise (90°)';
+    return 'Turn the <b>' + name + '</b> face ' + dir +
+      ', as you look directly at that face.';
+  }
+
+  function updateInstruction() {
+    const box = el('instruction');
+    if (!box) return;
+    if (!solution.length) { box.innerHTML = ''; box.classList.remove('show'); return; }
+    box.classList.add('show');
+    if (stepIndex >= solution.length) {
+      box.innerHTML = '<span class="step-num">Done</span> The cube is solved! 🎉';
+      return;
+    }
+    const mv = solution[stepIndex];
+    box.innerHTML = '<span class="step-num">Step ' + (stepIndex + 1) + ' / ' +
+      solution.length + '</span> <code>' + mv + '</code> — ' + describe(mv);
   }
 
   // ---- playback ----
@@ -322,22 +362,24 @@
   function togglePaint() {
     paintMode = !paintMode;
     stopPlay();
+    window.Cube3D.setPaintMode(paintMode);
     el('paintBtn').classList.toggle('active', paintMode);
     el('palette').style.display = paintMode ? 'flex' : 'none';
     el('paintHint').style.display = paintMode ? 'block' : 'none';
     document.body.classList.toggle('painting', paintMode);
     if (paintMode) {
       clearSolution();
-      setStatus('Paint mode: click stickers to set colours', '');
+      setStatus('Paint mode: click stickers on the cube or the net', '');
     } else {
       const err = validate(facelets);
-      setStatus(err ? err : 'Edits applied', err ? 'err' : 'ok');
+      setStatus(err ? err : 'Looks valid — press Solve', err ? 'err' : 'ok');
     }
   }
 
   // ---- wire up ----
   function init() {
     window.Cube3D.init(el('cube3d'));
+    window.Cube3D.setOnPaint(paintSticker); // click stickers on the 3D cube
     buildNet();
     buildPalette();
     window.Cube3D.setState(facelets);
@@ -353,6 +395,13 @@
     el('playBtn').addEventListener('click', togglePlay);
     el('nextBtn').addEventListener('click', () => { stopPlay(); stepForward(true); });
     el('lastBtn').addEventListener('click', () => seekTo(solution.length));
+
+    // Start in paint mode with the all-white cube.
+    window.Cube3D.setPaintMode(true);
+    el('paintBtn').classList.add('active');
+    el('palette').style.display = 'flex';
+    el('paintHint').style.display = 'block';
+    document.body.classList.add('painting');
 
     updatePlaybackButtons();
     setStatus('Loading solver…', '');

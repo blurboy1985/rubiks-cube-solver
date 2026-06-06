@@ -37,6 +37,16 @@
     return map;
   })();
 
+  // Reverse: "x,y,z,mat" -> facelet index (for picking stickers by ray).
+  const REVERSE = (function () {
+    const rev = {};
+    for (let i = 0; i < 54; i++) {
+      const f = FACELET_MAP[i];
+      rev[f.x + ',' + f.y + ',' + f.z + ',' + f.mat] = i;
+    }
+    return rev;
+  })();
+
   // Move -> {axis vector, layer coordinate, sign} (animation is cosmetic only).
   const MOVES = {
     U: { axis: 'y', layer: 1, sign: -1 },
@@ -53,6 +63,9 @@
   let animating = false;
   let dragState = null;
   let rotX = -0.5, rotY = 0.6; // view orientation
+  let raycaster, ndc;
+  let paintMode = false;
+  let onPaint = null;         // callback(faceletIndex) set by the app
 
   function key(x, y, z) { return x + ',' + y + ',' + z; }
 
@@ -92,10 +105,28 @@
           cubieByKey[key(x, y, z)] = mesh;
         }
 
+    raycaster = new THREE.Raycaster();
+    ndc = new THREE.Vector2();
+
     applyView();
     attachDrag(renderer.domElement);
     window.addEventListener('resize', () => resize(container));
     animate();
+  }
+
+  // Map a pointer event to the facelet index of the sticker under it (or -1).
+  function pick(clientX, clientY) {
+    const rect = renderer.domElement.getBoundingClientRect();
+    ndc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    ndc.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObjects(cubies, false);
+    if (!hits.length) return -1;
+    const hit = hits[0];
+    const h = hit.object.userData.home;
+    const mat = hit.face.materialIndex;
+    const idx = REVERSE[h.x + ',' + h.y + ',' + h.z + ',' + mat];
+    return idx === undefined ? -1 : idx;
   }
 
   function resize(container) {
@@ -113,7 +144,7 @@
   function attachDrag(dom) {
     function down(e) {
       const p = e.touches ? e.touches[0] : e;
-      dragState = { x: p.clientX, y: p.clientY };
+      dragState = { x: p.clientX, y: p.clientY, ox: p.clientX, oy: p.clientY, moved: 0 };
     }
     function move(e) {
       if (!dragState) return;
@@ -121,10 +152,20 @@
       rotY += (p.clientX - dragState.x) * 0.01;
       rotX += (p.clientY - dragState.y) * 0.01;
       rotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rotX));
-      dragState = { x: p.clientX, y: p.clientY };
+      dragState.moved += Math.abs(p.clientX - dragState.x) + Math.abs(p.clientY - dragState.y);
+      dragState.x = p.clientX;
+      dragState.y = p.clientY;
       applyView();
     }
-    function up() { dragState = null; }
+    function up(e) {
+      if (dragState && paintMode && onPaint && dragState.moved < 6 && !animating) {
+        // A click (not a drag): paint the sticker under the pointer.
+        const cx = dragState.ox, cy = dragState.oy;
+        const idx = pick(cx, cy);
+        if (idx >= 0) onPaint(idx);
+      }
+      dragState = null;
+    }
     dom.addEventListener('mousedown', down);
     window.addEventListener('mousemove', move);
     window.addEventListener('mouseup', up);
@@ -132,6 +173,9 @@
     dom.addEventListener('touchmove', move, { passive: true });
     dom.addEventListener('touchend', up);
   }
+
+  function setPaintMode(on) { paintMode = !!on; }
+  function setOnPaint(fn) { onPaint = fn; }
 
   // Paint every cubie from a 54-char facelet string and reset to home grid.
   function setState(facelets) {
@@ -190,5 +234,5 @@
     renderer.render(scene, camera);
   }
 
-  global.Cube3D = { init, setState, animateMove, isAnimating, COLORS };
+  global.Cube3D = { init, setState, animateMove, isAnimating, setPaintMode, setOnPaint, COLORS };
 })(window);

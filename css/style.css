@@ -147,6 +147,34 @@ body.painting .sticker:not(.center):hover { outline: 2px solid var(--text); }
   word-break: break-word;
 }
 
+.instruction {
+  display: none;
+  background: #11142a;
+  border: 1px solid var(--accent);
+  border-left-width: 4px;
+  border-radius: 9px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+.instruction.show { display: block; }
+.instruction .step-num {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 1px 8px;
+  border-radius: 20px;
+  margin-right: 6px;
+}
+.instruction code {
+  font-weight: 700;
+  color: var(--accent);
+}
+.instruction b { color: var(--text); }
+
 .solution { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
 .solution-head { margin-bottom: 8px; }
 .muted { color: var(--muted); font-weight: normal; }

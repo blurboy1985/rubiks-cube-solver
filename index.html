@@ -16,21 +16,22 @@
   <main class="layout">
     <section class="stage">
       <div id="cube3d" class="cube3d"></div>
-      <p class="hint">Drag to rotate the cube</p>
+      <p class="hint">Drag to rotate / flip the cube • click a sticker to paint it</p>
     </section>
 
     <section class="panel">
       <div class="actions">
         <button id="scrambleBtn" class="btn primary">🔀 Scramble</button>
         <button id="solveBtn" class="btn primary">✅ Solve</button>
-        <button id="resetBtn" class="btn">♻ Reset</button>
+        <button id="resetBtn" class="btn">⬜ Clear</button>
         <button id="paintBtn" class="btn">🎨 Paint</button>
       </div>
 
-      <div id="palette" class="palette" style="display:none"></div>
-      <p id="paintHint" class="paint-hint" style="display:none">
-        Pick a colour, then click stickers on the net below. Centre stickers are fixed.
-        Toggle Paint off when done.
+      <div id="palette" class="palette"></div>
+      <p id="paintHint" class="paint-hint">
+        Pick a colour, then click stickers — either directly on the 3D cube or on the
+        flat net below. Drag the cube to rotate and reach the back faces. Set all six
+        centre colours too, then press Solve.
       </p>
 
       <div id="status" class="status">Loading…</div>
@@ -47,6 +48,7 @@
         <div class="solution-head">
           <strong>Solution</strong> <span id="moveCount" class="muted"></span>
         </div>
+        <div id="instruction" class="instruction"></div>
         <div id="moves" class="moves"></div>
         <div class="playback">
           <button id="firstBtn" class="btn sm" title="First">⏮</button>
