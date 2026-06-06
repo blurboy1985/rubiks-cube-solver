@@ -17,6 +17,7 @@
   let playing = false;
   let rewinding = false;
   let playTimer = null;
+  let endCelebrated = false;
   let paintMode = true;
   let paintColor = 'U';
   let solverReady = false;
@@ -223,16 +224,18 @@
     updateInstruction();
   }
 
-  // Plain-English instruction for one move, e.g. "R'", "F2".
+  // Kid-friendly instruction for one move, e.g. "R'", "F2".
   function describe(move) {
     const face = move[0];
     const name = FACE_NAMES[face];
+    const colorName = FACE_LABELS[face];
+    const dot = '<span class="dot" style="background:' + window.Cube3D.COLORS[face] + '"></span>';
     let dir;
-    if (move.indexOf('2') >= 0) dir = 'a half turn (180°)';
-    else if (move.indexOf("'") >= 0) dir = 'counter-clockwise (90°)';
-    else dir = 'clockwise (90°)';
-    return 'Turn the <b>' + name + '</b> face ' + dir +
-      ', as you look directly at that face.';
+    if (move.indexOf('2') >= 0) dir = 'spin it ↻↻ <b>two times</b> (a big half turn)';
+    else if (move.indexOf("'") >= 0) dir = 'spin it ↺ <b>this way</b> (anti-clockwise)';
+    else dir = 'spin it ↻ <b>that way</b> (clockwise)';
+    return dot + ' Find the <b>' + name + '</b> side (' + colorName +
+      ' middle) and ' + dir + '!';
   }
 
   function updateInstruction() {
@@ -241,7 +244,7 @@
     if (!solution.length) { box.innerHTML = ''; box.classList.remove('show'); return; }
     box.classList.add('show');
     if (stepIndex >= solution.length) {
-      box.innerHTML = '<span class="step-num">Done</span> The cube is solved! 🎉';
+      box.innerHTML = '<span class="step-num">🏆 Done!</span> Woohoo! The cube is solved! You\'re a cube wizard! 🪄✨';
       return;
     }
     const mv = solution[stepIndex];
@@ -271,7 +274,6 @@
           playTimer = setTimeout(() => stepForward(true), 60);
         } else {
           stopPlay();
-          setStatus('Solved!', 'ok');
         }
       }
     };
@@ -369,6 +371,25 @@
     el('playBtn').disabled = !has;
     el('nextBtn').disabled = !has || stepIndex >= solution.length;
     el('lastBtn').disabled = !has || stepIndex >= solution.length;
+    maybeCelebrate();
+  }
+
+  // Fire confetti + banner once, when the cube reaches the solved end state.
+  function maybeCelebrate() {
+    if (solution.length && stepIndex >= solution.length) {
+      if (!endCelebrated) {
+        endCelebrated = true;
+        if (typeof window.celebrate === 'function') window.celebrate();
+        const banner = el('celebrate');
+        if (banner) {
+          banner.classList.add('show');
+          setTimeout(() => banner.classList.remove('show'), 2600);
+        }
+        setStatus('🎉 Solved! Great job!', 'ok');
+      }
+    } else {
+      endCelebrated = false;
+    }
   }
 
   function setBusy(b) {

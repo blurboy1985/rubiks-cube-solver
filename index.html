@@ -4,34 +4,42 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Rubik's Cube 3x3 Solver</title>
-  <meta name="description" content="Interactive 3D Rubik's Cube solver. Scramble or paint your cube, then watch a step-by-step solution." />
+  <meta name="description" content="Interactive 3D Rubik's Cube solver for kids. Mix up your cube, then watch the magic solve it step by step!" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+  <div class="blob blob1"></div>
+  <div class="blob blob2"></div>
+  <div class="blob blob3"></div>
+
   <header class="topbar">
-    <h1>Rubik's Cube <span>3×3×3</span> Solver</h1>
-    <p class="tagline">Scramble or paint your cube, then solve it step by step.</p>
+    <h1><span class="emoji">🧩</span> Magic Cube Solver <span class="emoji">🌈</span></h1>
+    <p class="tagline">Mix it up, then watch the cube un-jumble itself — like magic! ✨</p>
   </header>
 
   <main class="layout">
     <section class="stage">
       <div id="cube3d" class="cube3d"></div>
-      <p class="hint">Drag to rotate / flip the cube • click a sticker to paint it</p>
+      <div id="celebrate" class="celebrate"><span>🎉 You did it! 🎉</span></div>
+      <p class="hint">🖐️ Drag to spin the cube • 👆 tap a square to colour it</p>
     </section>
 
     <section class="panel">
       <div class="actions">
-        <button id="scrambleBtn" class="btn primary">🔀 Scramble</button>
-        <button id="solveBtn" class="btn primary">✅ Solve</button>
-        <button id="resetBtn" class="btn">⬜ Clear</button>
-        <button id="paintBtn" class="btn">🎨 Paint</button>
+        <button id="scrambleBtn" class="btn btn-scramble">🔀 Mix it up!</button>
+        <button id="solveBtn" class="btn btn-solve">✨ Solve it!</button>
+        <button id="resetBtn" class="btn btn-clear">🧽 Clear</button>
+        <button id="paintBtn" class="btn btn-paint">🎨 Paint</button>
       </div>
 
       <div id="palette" class="palette"></div>
       <p id="paintHint" class="paint-hint">
-        Pick a colour, then click stickers — either directly on the 3D cube or on the
-        flat net below. Drag the cube to rotate and reach the back faces. Set all six
-        centre colours too, then press Solve.
+        🌟 Pick a colour, then tap the squares — on the 3D cube or the flat map below.
+        Spin the cube to reach the back. Colour every square (the middle ones too!),
+        then hit <b>Solve it!</b>
       </p>
 
       <div id="status" class="status">Loading…</div>
@@ -41,23 +49,23 @@
       </div>
 
       <div class="scramble-line">
-        <strong>Scramble:</strong> <code id="scrambleText">—</code>
+        <strong>🔀 Mix:</strong> <code id="scrambleText">—</code>
       </div>
 
       <div class="solution">
         <div class="solution-head">
-          <strong>Solution</strong> <span id="moveCount" class="muted"></span>
+          <strong>🪄 Magic steps</strong> <span id="moveCount" class="muted"></span>
         </div>
         <div id="instruction" class="instruction"></div>
         <div id="moves" class="moves"></div>
         <div class="playback">
-          <button id="firstBtn" class="btn sm" title="First">⏮</button>
-          <button id="prevBtn" class="btn sm" title="Step back">◀</button>
+          <button id="firstBtn" class="btn sm" title="Rewind to start">⏮</button>
+          <button id="prevBtn" class="btn sm" title="One step back">◀</button>
           <button id="playBtn" class="btn sm wide">▶ Play</button>
-          <button id="nextBtn" class="btn sm" title="Step forward">▶</button>
-          <button id="lastBtn" class="btn sm" title="Last">⏭</button>
-          <label class="speed">Speed
-            <input id="speed" type="range" min="1" max="5" value="3" />
+          <button id="nextBtn" class="btn sm" title="One step forward">▶</button>
+          <button id="lastBtn" class="btn sm" title="Jump to the end">⏭</button>
+          <label class="speed">🐢
+            <input id="speed" type="range" min="1" max="5" value="3" />🐇
           </label>
         </div>
       </div>
@@ -66,13 +74,15 @@
 
   <footer class="foot">
     <p>
-      Built with an open-source two-phase (Kociemba) solver. Move notation: U/D/L/R/F/B
-      with <code>'</code> = counter-clockwise, <code>2</code> = half turn.
+      Made for curious kids 🧠 • Powered by a free open-source cube-solving robot brain.
+      Letters U/D/L/R/F/B are the six sides; <code>'</code> means turn the other way and
+      <code>2</code> means a big half turn.
     </p>
   </footer>
 
   <script src="vendor/three.min.js"></script>
   <script src="vendor/cube.js"></script>
+  <script src="js/confetti.js"></script>
   <script src="js/cube3d.js"></script>
   <script src="js/app.js"></script>
 </body>
