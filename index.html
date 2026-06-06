@@ -20,6 +20,12 @@
     <p class="tagline">Mix it up, then watch the cube un-jumble itself — like magic! ✨</p>
   </header>
 
+  <nav class="tabs">
+    <button id="tabSolver" class="tab active">🧩 Cube Solver</button>
+    <button id="tabGame" class="tab">🎨 Color Fun</button>
+  </nav>
+
+  <div id="solverView">
   <main class="layout">
     <section class="stage">
       <div id="cube3d" class="cube3d"></div>
@@ -71,6 +77,24 @@
       </div>
     </section>
   </main>
+  </div>
+
+  <div id="gameView" hidden>
+    <section class="game">
+      <p id="gameTitle" class="game-title">Let’s colour!</p>
+      <div class="game-stage">
+        <div id="gameGrid" class="game-grid"></div>
+      </div>
+      <p id="gameProgress" class="game-progress"></p>
+      <div id="gamePalette" class="game-palette"></div>
+      <div class="game-actions">
+        <button id="newPicBtn" class="btn btn-scramble">🔄 New picture</button>
+        <button id="clearPicBtn" class="btn btn-clear">🧽 Start over</button>
+        <button id="soundBtn" class="btn" title="Sound on/off">🔊</button>
+      </div>
+      <p class="game-hint">👆 Pick a colour, then tap the squares to colour the picture!</p>
+    </section>
+  </div>
 
   <footer class="foot">
     <p>
@@ -85,5 +109,26 @@
   <script src="js/confetti.js"></script>
   <script src="js/cube3d.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/toddler.js"></script>
+  <script>
+    (function () {
+      var tabSolver = document.getElementById('tabSolver');
+      var tabGame = document.getElementById('tabGame');
+      var solverView = document.getElementById('solverView');
+      var gameView = document.getElementById('gameView');
+      var gameStarted = false;
+      function show(which) {
+        var game = which === 'game';
+        solverView.hidden = game;
+        gameView.hidden = !game;
+        tabGame.classList.toggle('active', game);
+        tabSolver.classList.toggle('active', !game);
+        if (game && !gameStarted) { gameStarted = true; window.ToddlerGame.init(); }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      tabSolver.addEventListener('click', function () { show('solver'); });
+      tabGame.addEventListener('click', function () { show('game'); });
+    })();
+  </script>
 </body>
 </html>
