@@ -15,6 +15,7 @@
   let solution = [];            // array of moves
   let stepIndex = 0;            // playback position (0..solution.length)
   let playing = false;
+  let rewinding = false;
   let playTimer = null;
   let paintMode = true;
   let paintColor = 'U';
@@ -281,14 +282,47 @@
     }
   }
 
-  function stepBack() {
-    if (stepIndex <= 0) return;
+  // Inverse of a single move (for animating backwards).
+  function invertMove(mv) {
+    const f = mv[0];
+    if (mv.indexOf('2') >= 0) return mv;       // half turn is its own inverse
+    if (mv.indexOf("'") >= 0) return f;        // ccw -> cw
+    return f + "'";                            // cw -> ccw
+  }
+
+  function stepBack(animated) {
+    if (stepIndex <= 0) { if (rewinding) stopPlay(); return; }
+    const inv = invertMove(solution[stepIndex - 1]);
+    const after = stateAt(stepIndex - 1);
+    const finish = () => {
+      stepIndex--;
+      facelets = after;
+      render();
+      highlightMove();
+      updatePlaybackButtons();
+      if (rewinding) {
+        if (stepIndex > 0) {
+          playTimer = setTimeout(() => stepBack(true), 60);
+        } else {
+          stopPlay();
+          setStatus('Back at the start', '');
+        }
+      }
+    };
+    if (animated) {
+      window.Cube3D.animateMove(inv, speed(), finish);
+    } else {
+      finish();
+    }
+  }
+
+  // Rewind: animate backwards through every move to the start.
+  function rewind() {
+    if (!solution.length || stepIndex <= 0) return;
     stopPlay();
-    stepIndex--;
-    facelets = stateAt(stepIndex);
-    render();
-    highlightMove();
-    updatePlaybackButtons();
+    rewinding = true;
+    el('firstBtn').classList.add('active');
+    stepBack(true);
   }
 
   function seekTo(i) {
@@ -310,9 +344,12 @@
 
   function stopPlay() {
     playing = false;
+    rewinding = false;
     if (playTimer) { clearTimeout(playTimer); playTimer = null; }
     const b = el('playBtn');
     if (b) b.textContent = '▶ Play';
+    const f = el('firstBtn');
+    if (f) f.classList.remove('active');
   }
 
   function togglePlay() {
@@ -390,8 +427,8 @@
     el('solveBtn').disabled = true;
     el('paintBtn').addEventListener('click', togglePaint);
 
-    el('firstBtn').addEventListener('click', () => seekTo(0));
-    el('prevBtn').addEventListener('click', stepBack);
+    el('firstBtn').addEventListener('click', rewind);
+    el('prevBtn').addEventListener('click', () => { stopPlay(); stepBack(true); });
     el('playBtn').addEventListener('click', togglePlay);
     el('nextBtn').addEventListener('click', () => { stopPlay(); stepForward(true); });
     el('lastBtn').addEventListener('click', () => seekTo(solution.length));
