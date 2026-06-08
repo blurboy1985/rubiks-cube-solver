@@ -148,6 +148,7 @@
     const TAP_MAX = 8;        // total travel under this (px) = a tap, not a swipe
     const SWIPE_MIN = 22;     // net displacement over this (px) = a swipe
     const Q = Math.PI / 2;    // one quarter turn
+    const TILT = 0.5;         // pitch that still shows three sides (~28 degrees)
 
     function down(e) {
       const p = e.touches ? e.touches[0] : e;
@@ -177,8 +178,9 @@
         if (adx > ady) {
           targetY += (dx > 0 ? Q : -Q);                  // swipe right / left
         } else {
-          targetX += (dy > 0 ? Q : -Q);                  // swipe down / up
-          targetX = Math.max(-Q, Math.min(Q, targetX));  // don't tumble past the poles
+          // Up shows the top trio, down shows the bottom trio. Keep a fixed
+          // tilt (never flat-on) so three sides stay visible on every swipe.
+          targetX = (dy > 0 ? TILT : -TILT);             // swipe down / up
         }
       }
       dragState = null;
