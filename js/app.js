@@ -7,7 +7,8 @@
   const LETTERS = ['U', 'R', 'F', 'D', 'L', 'B'];
   const FACE_LABELS = { U: 'White', R: 'Red', F: 'Green', D: 'Yellow', L: 'Orange', B: 'Blue' };
   const FACE_NAMES = { U: 'Up (top)', R: 'Right', F: 'Front', D: 'Down (bottom)', L: 'Left', B: 'Back' };
-  const CENTER = { 0: 'U', 9: 'R', 18: 'F', 27: 'D', 36: 'L', 45: 'B' };
+  const CENTER_IDX = [4, 13, 22, 31, 40, 49]; // centre sticker of each face (U R F D L B order)
+  const CENTER = { 4: 'U', 13: 'R', 22: 'F', 31: 'D', 40: 'L', 49: 'B' };
 
   // ---- state ----
   let facelets = BLANK;         // current displayed state
@@ -145,17 +146,49 @@
     else setStatus('Cleared — paint your cube', '');
   }
 
+  // ---- colour normalisation ----
+  // cube.js (Kociemba) assumes a fixed scheme: the cube is held so that the
+  // White centre is Up, Yellow is Down, etc. But people paint a scrambled cube
+  // in whatever orientation it happens to be in, so the centre colours rarely
+  // line up with that assumption. We read the six centres to learn which colour
+  // belongs on which face, then relabel every sticker into the canonical
+  // U/R/F/D/L/B scheme before handing the state to cube.js. This is a pure
+  // renaming of colours (positions are untouched), so any solution we get back
+  // applies unchanged to the cube as painted.
+  function centerRemap(str) {
+    const map = {};
+    CENTER_IDX.forEach((idx, face) => { map[str[idx]] = LETTERS[face]; });
+    return map;
+  }
+  function relabel(str, map) {
+    let out = '';
+    for (const ch of str) out += (map[ch] || ch);
+    return out;
+  }
+  function invertMap(map) {
+    const inv = {};
+    for (const k in map) inv[map[k]] = k;
+    return inv;
+  }
+  // Canonicalise a painted state so its centres read U R F D L B.
+  function normalize(str) {
+    return relabel(str, centerRemap(str));
+  }
+
   // ---- validation ----
   function validate(str) {
     const counts = {};
     for (const ch of str) counts[ch] = (counts[ch] || 0) + 1;
     for (const L of LETTERS)
       if (counts[L] !== 9) return 'Each colour must appear exactly 9 times (' + FACE_LABELS[L] + ': ' + (counts[L] || 0) + ').';
-    const centers = [4, 13, 22, 31, 40, 49].map((i) => str[i]);
+    const centers = CENTER_IDX.map((i) => str[i]);
     if (new Set(centers).size !== 6) return 'The 6 centre stickers must each be a different colour.';
     try {
-      const round = Cube.fromString(str).asString();
-      if (round !== str) return 'That sticker arrangement is not a valid cube state.';
+      // Validate in the canonical scheme so the check is independent of how the
+      // cube was oriented while painting.
+      const norm = normalize(str);
+      const round = Cube.fromString(norm).asString();
+      if (round !== norm) return 'That sticker arrangement is not a valid cube state.';
     } catch (err) {
       return 'That sticker arrangement is not a valid cube state.';
     }
@@ -171,9 +204,11 @@
     if (!solverReady) { setStatus('Solver still loading…', ''); return; }
     setBusy(true);
     setStatus('Solving…', '');
-    baseState = facelets;
+    baseState = facelets;             // keep painted colours for display/playback
     solveId++;
-    worker.postMessage({ type: 'solve', facelets: facelets, id: solveId });
+    // Solve in the canonical scheme; the move list is position-based, so it
+    // applies just as well to the painted (possibly re-oriented) cube.
+    worker.postMessage({ type: 'solve', facelets: normalize(facelets), id: solveId });
   }
 
   function onSolution(sol) {
@@ -254,9 +289,13 @@
 
   // ---- playback ----
   function stateAt(n) {
-    const cube = Cube.fromString(baseState);
+    // Run the move maths in the canonical scheme (cube.js can't parse a
+    // re-oriented cube), then map the colours back so the user sees the cube
+    // in the colours they painted.
+    const map = centerRemap(baseState);
+    const cube = Cube.fromString(relabel(baseState, map));
     if (n > 0) cube.move(solution.slice(0, n).join(' '));
-    return cube.asString();
+    return relabel(cube.asString(), invertMap(map));
   }
 
   function stepForward(animated) {
