@@ -99,6 +99,7 @@
     paintNet();
     window.Cube3D.setState(facelets);
     clearSolution();
+    autosave();
   }
 
   // ---- rendering ----
@@ -133,6 +134,7 @@
     applyMoves(seq);
     el('scrambleText').textContent = seq;
     render();
+    autosave();
     setStatus('Scrambled — press Solve', '');
   }
 
@@ -142,8 +144,121 @@
     facelets = BLANK;
     el('scrambleText').textContent = '—';
     render();
+    autosave();
     if (!paintMode) togglePaint();
     else setStatus('Cleared — paint your cube', '');
+  }
+
+  // ---- saving: auto-save, shareable URL, and named slots (all client-side;
+  //      GitHub Pages has no backend, so everything lives in localStorage / the
+  //      page URL). ----
+  const LS_AUTOSAVE = 'cube.autosave';
+  const LS_SAVES = 'cube.saves';
+
+  function isValidStateString(s) {
+    return typeof s === 'string' && s.length === 54 && /^[URFDLB]+$/.test(s);
+  }
+
+  function autosave() {
+    try { localStorage.setItem(LS_AUTOSAVE, facelets); } catch (e) { /* storage off */ }
+  }
+
+  // Replace the displayed cube with a saved/shared state.
+  function loadState(str) {
+    if (!isValidStateString(str)) return false;
+    stopPlay();
+    clearSolution();
+    facelets = str;
+    el('scrambleText').textContent = '—';
+    render();
+    autosave();
+    return true;
+  }
+
+  function readSaves() {
+    try { return JSON.parse(localStorage.getItem(LS_SAVES) || '{}') || {}; }
+    catch (e) { return {}; }
+  }
+  function writeSaves(obj) {
+    try { localStorage.setItem(LS_SAVES, JSON.stringify(obj)); } catch (e) { /* storage off */ }
+  }
+
+  // --- shareable URL: the cube lives in the address bar as #cube=<54 letters> ---
+  function stateFromHash() {
+    const m = /[#&]cube=([URFDLB]{54})/.exec(location.hash || '');
+    return m ? m[1] : null;
+  }
+  function updateShareUrl() {
+    try { history.replaceState(null, '', '#cube=' + facelets); } catch (e) { /* ignore */ }
+  }
+  function shareCube() {
+    const err = validate(facelets);
+    updateShareUrl();
+    const url = location.href;
+    const ok = () => setStatus('🔗 Link copied! Bookmark or paste it to reload this cube.', 'ok');
+    const manual = () => setStatus('🔗 Your cube is in the address bar — copy the link to save or share it.', '');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(ok, manual);
+    } else {
+      manual();
+    }
+    if (err) setTimeout(() => setStatus('Saved the link, but note: ' + err, ''), 1200);
+  }
+
+  // --- named save slots ---
+  function saveNamed() {
+    const name = (window.prompt('Name this cube:') || '').trim();
+    if (!name) return;
+    const saves = readSaves();
+    const exists = Object.prototype.hasOwnProperty.call(saves, name);
+    if (exists && !window.confirm('“' + name + '” already exists. Overwrite it?')) return;
+    saves[name] = facelets;
+    writeSaves(saves);
+    refreshSavesList(name);
+    setStatus('💾 Saved “' + name + '”.', 'ok');
+  }
+
+  function refreshSavesList(selectName) {
+    const sel = el('savesList');
+    if (!sel) return;
+    const names = Object.keys(readSaves()).sort();
+    sel.innerHTML = '';
+    const def = document.createElement('option');
+    def.value = '';
+    def.textContent = names.length ? '📂 Load saved…' : '📂 No saved cubes yet';
+    sel.appendChild(def);
+    names.forEach((n) => {
+      const o = document.createElement('option');
+      o.value = n;
+      o.textContent = n;
+      sel.appendChild(o);
+    });
+    if (selectName && names.indexOf(selectName) >= 0) sel.value = selectName;
+    el('deleteSaveBtn').disabled = !sel.value;
+  }
+
+  function onLoadSelect() {
+    const sel = el('savesList');
+    const name = sel.value;
+    el('deleteSaveBtn').disabled = !name;
+    if (!name) return;
+    const saves = readSaves();
+    if (saves[name] && loadState(saves[name])) {
+      updateShareUrl();
+      setStatus('📂 Loaded “' + name + '”.', 'ok');
+    }
+  }
+
+  function deleteSelected() {
+    const sel = el('savesList');
+    const name = sel.value;
+    if (!name) return;
+    if (!window.confirm('Delete saved cube “' + name + '”?')) return;
+    const saves = readSaves();
+    delete saves[name];
+    writeSaves(saves);
+    refreshSavesList();
+    setStatus('🗑 Deleted “' + name + '”.', '');
   }
 
   // ---- colour normalisation ----
@@ -477,6 +592,17 @@
   function init() {
     window.Cube3D.init(el('cube3d'));
     window.Cube3D.setOnPaint(paintSticker); // click stickers on the 3D cube
+
+    // Restore a cube: a shared #cube=… link wins, else the last auto-save.
+    const fromHash = stateFromHash();
+    if (isValidStateString(fromHash)) {
+      facelets = fromHash;
+    } else {
+      let saved = null;
+      try { saved = localStorage.getItem(LS_AUTOSAVE); } catch (e) { saved = null; }
+      if (isValidStateString(saved)) facelets = saved;
+    }
+
     buildNet();
     buildPalette();
     window.Cube3D.setState(facelets);
@@ -486,6 +612,12 @@
     el('solveBtn').addEventListener('click', requestSolve);
     el('solveBtn').disabled = true;
     el('paintBtn').addEventListener('click', togglePaint);
+
+    el('shareBtn').addEventListener('click', shareCube);
+    el('saveBtn').addEventListener('click', saveNamed);
+    el('savesList').addEventListener('change', onLoadSelect);
+    el('deleteSaveBtn').addEventListener('click', deleteSelected);
+    refreshSavesList();
 
     el('firstBtn').addEventListener('click', rewind);
     el('prevBtn').addEventListener('click', () => { stopPlay(); stepBack(true); });

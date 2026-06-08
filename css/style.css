@@ -240,6 +240,30 @@ body.painting .sticker:not(.center):hover { transform: scale(1.12); outline: 3px
 .sticker.center { box-shadow: inset 0 0 0 3px rgba(255,255,255,0.85), inset 0 -3px 0 rgba(0,0,0,0.15); }
 
 .scramble-line { margin: 16px 0 6px; font-size: 0.95rem; color: var(--ink-soft); font-weight: 500; }
+
+.savebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0 6px;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+.saves-list {
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 2px solid #e7e1ff;
+  background: #faf8ff;
+  cursor: pointer;
+  max-width: 200px;
+}
+.savebar .btn.sm:disabled { opacity: 0.45; cursor: default; }
 code {
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   background: #f0ecff;

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20260608" />
+  <link rel="stylesheet" href="css/style.css?v=20260608b" />
 </head>
 <body>
   <div class="blob blob1"></div>
@@ -56,6 +56,14 @@
 
       <div class="scramble-line">
         <strong>🔀 Mix:</strong> <code id="scrambleText">—</code>
+      </div>
+
+      <div class="savebar">
+        <strong>💾 Save:</strong>
+        <button id="shareBtn" class="btn sm" title="Copy a link to this exact cube">🔗 Share link</button>
+        <button id="saveBtn" class="btn sm" title="Save this cube under a name">💾 Save</button>
+        <select id="savesList" class="saves-list" title="Load a saved cube"></select>
+        <button id="deleteSaveBtn" class="btn sm" title="Delete the selected saved cube" disabled>🗑</button>
       </div>
 
       <div class="solution">
@@ -106,10 +114,10 @@
 
   <script src="vendor/three.min.js"></script>
   <script src="vendor/cube.js"></script>
-  <script src="js/confetti.js?v=20260608"></script>
-  <script src="js/cube3d.js?v=20260608"></script>
-  <script src="js/app.js?v=20260608"></script>
-  <script src="js/toddler.js?v=20260608"></script>
+  <script src="js/confetti.js?v=20260608b"></script>
+  <script src="js/cube3d.js?v=20260608b"></script>
+  <script src="js/app.js?v=20260608b"></script>
+  <script src="js/toddler.js?v=20260608b"></script>
   <script>
     (function () {
       var tabSolver = document.getElementById('tabSolver');
