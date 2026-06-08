@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20260608b" />
+  <link rel="stylesheet" href="css/style.css?v=20260608c" />
 </head>
 <body>
   <div class="blob blob1"></div>
@@ -30,7 +30,7 @@
     <section class="stage">
       <div id="cube3d" class="cube3d"></div>
       <div id="celebrate" class="celebrate"><span>🎉 You did it! 🎉</span></div>
-      <p class="hint">🖐️ Drag to spin the cube • 👆 tap a square to colour it</p>
+      <p class="hint">👉 Swipe to turn the cube up/down/left/right • 👆 tap a square to colour it</p>
     </section>
 
     <section class="panel">
@@ -44,7 +44,7 @@
       <div id="palette" class="palette"></div>
       <p id="paintHint" class="paint-hint">
         🌟 Pick a colour, then tap the squares — on the 3D cube or the flat map below.
-        Spin the cube to reach the back. Colour every square (the middle ones too!),
+        Swipe the cube to reach the back. Colour every square (the middle ones too!),
         then hit <b>Solve it!</b>
       </p>
 
@@ -114,10 +114,10 @@
 
   <script src="vendor/three.min.js"></script>
   <script src="vendor/cube.js"></script>
-  <script src="js/confetti.js?v=20260608b"></script>
-  <script src="js/cube3d.js?v=20260608b"></script>
-  <script src="js/app.js?v=20260608b"></script>
-  <script src="js/toddler.js?v=20260608b"></script>
+  <script src="js/confetti.js?v=20260608c"></script>
+  <script src="js/cube3d.js?v=20260608c"></script>
+  <script src="js/app.js?v=20260608c"></script>
+  <script src="js/toddler.js?v=20260608c"></script>
   <script>
     (function () {
       var tabSolver = document.getElementById('tabSolver');
@@ -137,6 +137,4 @@
       tabSolver.addEventListener('click', function () { show('solver'); });
       tabGame.addEventListener('click', function () { show('game'); });
     })();
-  </script>
-</body>
-</html>
+  </script

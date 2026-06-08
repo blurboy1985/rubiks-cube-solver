@@ -17,6 +17,8 @@
   let stepIndex = 0;            // playback position (0..solution.length)
   let playing = false;
   let rewinding = false;
+  let seeking = false;          // animating toward a clicked step
+  let seekTarget = 0;
   let playTimer = null;
   let endCelebrated = false;
   let paintMode = true;
@@ -332,6 +334,7 @@
     solution = sol.length ? sol.split(/\s+/) : [];
     stepIndex = 0;
     facelets = baseState;
+    window.Cube3D.resetView(); // show the cube the way the solver describes the moves
     render();
     renderSolutionList();
     if (solution.length === 0) {
@@ -476,23 +479,59 @@
   function rewind() {
     if (!solution.length || stepIndex <= 0) return;
     stopPlay();
+    window.Cube3D.resetView();
     rewinding = true;
     el('firstBtn').classList.add('active');
     stepBack(true);
   }
 
+  // Animate move-by-move from the current step to step `i` (forward or
+  // backward), so clicking a step in the list walks the cube there visibly.
   function seekTo(i) {
-    stopPlay();
-    stepIndex = Math.max(0, Math.min(solution.length, i));
-    facelets = stateAt(stepIndex);
-    render();
-    highlightMove();
-    updatePlaybackButtons();
+    if (!solution.length) return;
+    const wasSeeking = seeking;
+    stopPlay();                    // stops play/rewind (and clears the seeking flag)
+    window.Cube3D.resetView();
+    seekTarget = Math.max(0, Math.min(solution.length, i));
+    // If a walk was already animating, its pending step callback will pick up
+    // the new target -- just re-arm the flag and let that chain continue.
+    seeking = true;
+    if (wasSeeking) return;
+    seekStep();
+  }
+
+  function seekStep() {
+    if (stepIndex === seekTarget || !solution.length) {
+      seeking = false;
+      updatePlaybackButtons();
+      return;
+    }
+    if (seekTarget > stepIndex) {
+      const after = stateAt(stepIndex + 1);
+      window.Cube3D.animateMove(solution[stepIndex], speed(), () => {
+        stepIndex++;
+        facelets = after;
+        render();
+        highlightMove();
+        seekStep();
+      });
+    } else {
+      const inv = invertMove(solution[stepIndex - 1]);
+      const after = stateAt(stepIndex - 1);
+      window.Cube3D.animateMove(inv, speed(), () => {
+        stepIndex--;
+        facelets = after;
+        render();
+        highlightMove();
+        seekStep();
+      });
+    }
   }
 
   function play() {
     if (!solution.length) return;
-    if (stepIndex >= solution.length) seekTo(0);
+    window.Cube3D.resetView();
+    if (stepIndex >= solution.length) { stepIndex = 0; facelets = stateAt(0); render(); highlightMove(); }
     playing = true;
     el('playBtn').textContent = '⏸ Pause';
     stepForward(true);
@@ -501,6 +540,7 @@
   function stopPlay() {
     playing = false;
     rewinding = false;
+    seeking = false;            // also halt an in-progress click-to-seek walk
     if (playTimer) { clearTimeout(playTimer); playTimer = null; }
     const b = el('playBtn');
     if (b) b.textContent = '▶ Play';
@@ -620,9 +660,9 @@
     refreshSavesList();
 
     el('firstBtn').addEventListener('click', rewind);
-    el('prevBtn').addEventListener('click', () => { stopPlay(); stepBack(true); });
+    el('prevBtn').addEventListener('click', () => { stopPlay(); window.Cube3D.resetView(); stepBack(true); });
     el('playBtn').addEventListener('click', togglePlay);
-    el('nextBtn').addEventListener('click', () => { stopPlay(); stepForward(true); });
+    el('nextBtn').addEventListener('click', () => { stopPlay(); window.Cube3D.resetView(); stepForward(true); });
     el('lastBtn').addEventListener('click', () => seekTo(solution.length));
 
     // Start in paint mode with the all-white cube.

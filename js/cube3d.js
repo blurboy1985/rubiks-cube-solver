@@ -62,7 +62,8 @@
   let cubieByKey = {};        // "x,y,z" -> mesh (home grid position)
   let animating = false;
   let dragState = null;
-  let rotX = -0.5, rotY = 0.6; // view orientation
+  let rotX = -0.5, rotY = 0.6;       // current (animated) view orientation
+  let targetX = -0.5, targetY = 0.6; // snap goals; each swipe nudges these 90°
   let raycaster, ndc;
   let paintMode = false;
   let onPaint = null;         // callback(faceletIndex) set by the app
@@ -141,28 +142,44 @@
     cubeGroup.rotation.set(rotX, rotY, 0);
   }
 
+  // Swipe to turn the whole cube: a flick left/right yaws it a quarter turn,
+  // up/down pitches it. A near-stationary press is treated as a tap (paint).
   function attachDrag(dom) {
+    const TAP_MAX = 8;        // total travel under this (px) = a tap, not a swipe
+    const SWIPE_MIN = 22;     // net displacement over this (px) = a swipe
+    const Q = Math.PI / 2;    // one quarter turn
+
     function down(e) {
       const p = e.touches ? e.touches[0] : e;
-      dragState = { x: p.clientX, y: p.clientY, ox: p.clientX, oy: p.clientY, moved: 0 };
+      dragState = { ox: p.clientX, oy: p.clientY, moved: 0, lx: p.clientX, ly: p.clientY };
     }
     function move(e) {
       if (!dragState) return;
       const p = e.touches ? e.touches[0] : e;
-      rotY += (p.clientX - dragState.x) * 0.01;
-      rotX += (p.clientY - dragState.y) * 0.01;
-      rotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rotX));
-      dragState.moved += Math.abs(p.clientX - dragState.x) + Math.abs(p.clientY - dragState.y);
-      dragState.x = p.clientX;
-      dragState.y = p.clientY;
-      applyView();
+      dragState.moved += Math.abs(p.clientX - dragState.lx) + Math.abs(p.clientY - dragState.ly);
+      dragState.lx = p.clientX;
+      dragState.ly = p.clientY;
     }
     function up(e) {
-      if (dragState && paintMode && onPaint && dragState.moved < 6 && !animating) {
-        // A click (not a drag): paint the sticker under the pointer.
-        const cx = dragState.ox, cy = dragState.oy;
-        const idx = pick(cx, cy);
-        if (idx >= 0) onPaint(idx);
+      if (!dragState) return;
+      const p = e.changedTouches ? e.changedTouches[0] : e;
+      const dx = p.clientX - dragState.ox;
+      const dy = p.clientY - dragState.oy;
+      const adx = Math.abs(dx), ady = Math.abs(dy);
+
+      if (dragState.moved < TAP_MAX && adx < TAP_MAX && ady < TAP_MAX) {
+        // A tap (not a swipe): paint the sticker under the pointer.
+        if (paintMode && onPaint && !animating) {
+          const idx = pick(dragState.ox, dragState.oy);
+          if (idx >= 0) onPaint(idx);
+        }
+      } else if (Math.max(adx, ady) >= SWIPE_MIN) {
+        if (adx > ady) {
+          targetY += (dx > 0 ? Q : -Q);                  // swipe right / left
+        } else {
+          targetX += (dy > 0 ? Q : -Q);                  // swipe down / up
+          targetX = Math.max(-Q, Math.min(Q, targetX));  // don't tumble past the poles
+        }
       }
       dragState = null;
     }
@@ -229,10 +246,21 @@
 
   function isAnimating() { return animating; }
 
+  // Snap the view back to the standard solver orientation (U top, F front,
+  // R right) so the move labels in the solution match what the user sees.
+  function resetView() { targetX = -0.5; targetY = 0.6; }
+
   function animate() {
     requestAnimationFrame(animate);
+    // Glide the view toward the latest swipe target (quarter-turn snaps).
+    const dx = targetX - rotX, dy = targetY - rotY;
+    if (Math.abs(dx) > 1e-4 || Math.abs(dy) > 1e-4) {
+      rotX += dx * 0.2;
+      rotY += dy * 0.2;
+      applyView();
+    }
     renderer.render(scene, camera);
   }
 
-  global.Cube3D = { init, setState, animateMove, isAnimating, setPaintMode, setOnPaint, COLORS };
+  global.Cube3D = { init, setState, animateMove, isAnimating, resetView, setPaintMode, setOnPaint, COLORS };
 })(window);
