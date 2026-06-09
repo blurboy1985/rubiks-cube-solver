@@ -17,10 +17,16 @@
 
   var KIMI_MODEL = 'kimi-k2.6';
   var LS_KEY = 'cube.kimiKey';
-  var LS_BASE = 'cube.kimiBase';
-  // Default to the local CORS proxy (run `node proxy.js`); OpenCode Go blocks
-  // direct browser calls. Override in the ⚙︎ box for a deployed proxy.
-  var DEFAULT_BASE = 'http://localhost:8787/zen/go/v1/chat/completions';
+  // The endpoint is fixed by where the page is served:
+  //  • localhost  -> the local CORS proxy (run `node proxy.js`)
+  //  • anywhere else (e.g. GitHub Pages) -> the deployed Cloudflare Worker
+  var WORKER_BASE = 'https://cube-proxy.daniel-tianwen.workers.dev/zen/go/v1/chat/completions';
+  var LOCAL_BASE  = 'http://localhost:8787/zen/go/v1/chat/completions';
+  var DEFAULT_BASE = (function () {
+    var h = (location.hostname || '').toLowerCase();
+    var isLocal = (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h === '');
+    return isLocal ? LOCAL_BASE : WORKER_BASE;
+  })();
 
   // heic-to bundles a modern libheif (handles iPhone HEIC variants heic2any can't);
   // self-contained IIFE exposing window.HeicTo, WASM inlined (no extra fetch).
@@ -59,8 +65,7 @@
 
   function getKey()  { try { return localStorage.getItem(LS_KEY) || ''; } catch (e) { return ''; } }
   function setKey(k) { try { if (k) localStorage.setItem(LS_KEY, k); else localStorage.removeItem(LS_KEY); } catch (e) {} }
-  function getBase() { try { return localStorage.getItem(LS_BASE) || DEFAULT_BASE; } catch (e) { return DEFAULT_BASE; } }
-  function setBase(u){ try { if (u && u !== DEFAULT_BASE) localStorage.setItem(LS_BASE, u); else localStorage.removeItem(LS_BASE); } catch (e) {} }
+  function getBase() { return DEFAULT_BASE; }
   // When the proxy/endpoint injects the key itself, the browser sends none.
   function proxyHoldsKey()  { try { return localStorage.getItem('cube.proxyKey') === '1'; } catch (e) { return false; } }
   function setProxyHoldsKey(b){ try { if (b) localStorage.setItem('cube.proxyKey', '1'); else localStorage.removeItem('cube.proxyKey'); } catch (e) {} }
@@ -368,18 +373,12 @@
     var ex = body.querySelector('.pw-keybox'); if (ex) ex.parentNode.removeChild(ex);
     var haveKey = !!getKey();
     var box = elt('div', 'pw-keybox');
-    box.innerHTML = '<p>' +
-      (modeArg === 'settings' ? 'Update your <b>OpenCode Go API key</b> and/or the API endpoint. '
-                              : 'To read colours automatically, paste your <b>OpenCode Go API key</b>. ') +
-      'It is stored only in this browser (localStorage) and sent straight to the API.' +
-      (modeArg === 'settings' ? ' Local proxy endpoint: <code>http://localhost:8787/zen/go/v1/chat/completions</code>.' : '') +
-      '</p>';
+    box.innerHTML = '<p>To read colours automatically, paste your <b>OpenCode Go API key</b>. ' +
+      'It is stored only in this browser (localStorage) and sent straight to the API. ' +
+      'Or, if your proxy supplies the key, just tick the box below.</p>';
     var row = elt('div', 'pw-keyrow');
     var input = elt('input', 'pw-keyinput'); input.type = 'password';
     input.placeholder = haveKey ? 'API key saved — leave blank to keep it' : 'sk-...';
-    var baseInput = elt('input', 'pw-keyinput pw-baseinput'); baseInput.type = 'text';
-    baseInput.placeholder = 'API endpoint'; baseInput.value = getBase();
-
     // "my proxy holds the key" toggle
     var proxyLabel = elt('label', 'pw-proxykey');
     var cb = elt('input'); cb.type = 'checkbox'; cb.checked = proxyHoldsKey();
@@ -395,19 +394,18 @@
       var k = input.value.trim() || getKey();
       if (!proxy && !k) { input.focus(); return; }
       if (k) setKey(k);
-      setBase(baseInput.value.trim());
       box.parentNode.removeChild(box);
       if (photos[step]) detect(photos[step]);
       else setMsg(proxy ? 'Saved — your proxy supplies the key. Take a photo.' : 'Saved. Take a photo to read colours.', 'ok');
     });
     var test = elt('button', 'btn sm', '🔌 Test');
-    test.addEventListener('click', function () { testConnection(input.value.trim() || getKey(), baseInput.value.trim() || getBase()); });
+    test.addEventListener('click', function () { testConnection(input.value.trim() || getKey(), getBase()); });
     var cancel = elt('button', 'btn sm', modeArg === 'settings' ? 'Cancel' : 'Skip (paint by hand)');
     cancel.addEventListener('click', function () {
       box.parentNode.removeChild(box);
       if (modeArg !== 'settings') setMsg('No problem — tap the squares to set the colours from your photo.', '');
     });
-    row.appendChild(input); row.appendChild(baseInput); row.appendChild(save); row.appendChild(test); row.appendChild(cancel);
+    row.appendChild(input); row.appendChild(save); row.appendChild(test); row.appendChild(cancel);
     box.appendChild(row);
     box.appendChild(proxyLabel);
     syncKeyDisabled();
