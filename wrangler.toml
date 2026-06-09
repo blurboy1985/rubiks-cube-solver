@@ -1,0 +1,11 @@
+name = "cube-proxy"
+main = "worker.js"
+compatibility_date = "2025-06-01"
+
+# Lock the proxy to your site (recommended). Change to your Pages origin.
+[vars]
+ALLOWED_ORIGIN = "https://blurboy1985.github.io"
+
+# The OpenCode Go API key is a SECRET, not a plaintext var. Set it with:
+#   wrangler secret put OPENCODE_KEY
+# (only needed if you want the key held by the Worker instead of the browser)

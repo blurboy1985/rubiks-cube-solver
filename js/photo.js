@@ -384,16 +384,41 @@
       box.parentNode.removeChild(box);
       if (photos[step]) detect(photos[step]); else setMsg('Saved. Take a photo to read colours.', 'ok');
     });
+    var test = elt('button', 'btn sm', '🔌 Test');
+    test.addEventListener('click', function () { testConnection(input.value.trim() || getKey(), baseInput.value.trim() || getBase()); });
     var cancel = elt('button', 'btn sm', modeArg === 'settings' ? 'Cancel' : 'Skip (paint by hand)');
     cancel.addEventListener('click', function () {
       box.parentNode.removeChild(box);
       if (modeArg !== 'settings') setMsg('No problem — tap the squares to set the colours from your photo.', '');
     });
-    row.appendChild(input); row.appendChild(baseInput); row.appendChild(save); row.appendChild(cancel);
+    row.appendChild(input); row.appendChild(baseInput); row.appendChild(save); row.appendChild(test); row.appendChild(cancel);
     box.appendChild(row);
     var shot = body.querySelector('.pw-shot');
     shot.parentNode.insertBefore(box, shot.nextSibling);
     input.focus();
+  }
+
+  // ---- connection self-test (diagnoses endpoint/key/CORS problems) ----
+  function testConnection(key, base) {
+    if (location.protocol === 'https:' && /^http:\/\//i.test(base)) {
+      setMsg('❌ Your page is HTTPS but the endpoint is HTTP (' + base + '). Browsers block that (mixed content). Use the https Worker URL.', 'err');
+      return;
+    }
+    setMsg('🔌 Testing ' + base + ' …', 'busy');
+    fetch(base, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (key || 'none') },
+      body: JSON.stringify({ model: KIMI_MODEL, max_tokens: 1, messages: [{ role: 'user', content: 'ping' }] })
+    }).then(function (res) {
+      return res.text().then(function (t) { return { status: res.status, t: t }; });
+    }).then(function (r) {
+      if (r.status === 200) setMsg('✅ Connected! Endpoint and key both work. You can scan now.', 'ok');
+      else if (r.status === 401 || r.status === 403) setMsg('Reached the proxy/API ✓ but the key was rejected (HTTP ' + r.status + '). Fix the key above.', 'err');
+      else if (/<!doctype|<html/i.test(r.t)) setMsg('Reached the server, but got a web page instead of the API. Add the path: the endpoint must end with /zen/go/v1/chat/completions', 'err');
+      else setMsg('Reached the server but got HTTP ' + r.status + '. Check the endpoint path (…/zen/go/v1/chat/completions).', 'err');
+    }).catch(function (e) {
+      setMsg('❌ Could not reach ' + base + ' (' + (e && e.message) + '). Check the Worker URL is correct and deployed, or that `node proxy.js` is running for localhost.', 'err');
+    });
   }
 
   // ---- detection ----
