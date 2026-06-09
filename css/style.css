@@ -703,3 +703,40 @@ code {
 @media (prefers-reduced-motion: reduce) {
   .cubie .cubie-body, .cubie .eyelid, .cubie .cubie-pupil { animation: none !important; }
 }
+
+/* ===== sound + toddler-mode tab buttons ===== */
+.tab-round { padding: 11px 14px; }
+.tab-kid.active { background: #ffe9bd; color: #b35c00; box-shadow: 0 4px 0 #e08700; }
+.tab-kid.holding { animation: kid-hold 1.5s linear forwards; }
+@keyframes kid-hold {
+  0% { box-shadow: 0 4px 0 rgba(120, 90, 200, 0.2), inset 0 0 0 0 #ffd23f; }
+  100% { box-shadow: 0 4px 0 var(--purple-d), inset 0 -3em 0 0 #ffd23f; }
+}
+
+/* ===== Toddler Mode: hide everything but Mix / Solve / Play ===== */
+body.toddler .paint-hint,
+body.toddler .savebar,
+body.toddler .scramble-line,
+body.toddler .moves,
+body.toddler .speed,
+body.toddler .net-wrap,
+body.toddler #palette,
+body.toddler #paintBtn,
+body.toddler #photoBtn,
+body.toddler #resetBtn,
+body.toddler #moreBtn,
+body.toddler .more-sheet,
+body.toddler #status,
+body.toddler .hint,
+body.toddler .foot { display: none !important; }
+
+body.toddler .actions { grid-template-columns: 1fr 1fr; }
+body.toddler .actions .btn { font-size: 1.35rem; min-height: 68px; }
+body.toddler .btn.sm { min-width: 64px; min-height: 64px; font-size: 1.4rem; }
+body.toddler .instruction code { display: none; }
+body.toddler .instruction { font-size: 1.25rem; }
+body.toddler .playback { justify-content: center; }
+
+@media (max-width: 820px) {
+  body.toddler .actions { grid-template-columns: 1fr 1fr; }
+}

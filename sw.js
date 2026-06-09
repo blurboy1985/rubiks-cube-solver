@@ -1,17 +1,19 @@
 /* Service worker: cache-first for same-origin static assets so the app
    installs to the home screen and works offline. */
-const VERSION = 'cube-v20260610a';
+const VERSION = 'cube-v20260610b';
 const CORE = [
   '.',
   'index.html',
   'manifest.json',
-  'css/style.css?v=20260610a',
-  'js/confetti.js?v=20260610a',
-  'js/cube3d.js?v=20260610a',
-  'js/cubie.js?v=20260610a',
-  'js/app.js?v=20260610a',
-  'js/photo.js?v=20260610a',
-  'js/toddler.js?v=20260610a',
+  'css/style.css?v=20260610b',
+  'js/confetti.js?v=20260610b',
+  'js/cube3d.js?v=20260610b',
+  'js/cubie.js?v=20260610b',
+  'js/sound.js?v=20260610b',
+  'js/kidmode.js?v=20260610b',
+  'js/app.js?v=20260610b',
+  'js/photo.js?v=20260610b',
+  'js/toddler.js?v=20260610b',
   'js/solver-worker.js',
   'vendor/three.min.js',
   'vendor/cube.js',

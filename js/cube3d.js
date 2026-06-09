@@ -67,6 +67,8 @@
   let raycaster, ndc;
   let paintMode = false;
   let onPaint = null;         // callback(faceletIndex) set by the app
+  let showArrows = true;      // big curved arrow on the turning face
+  let arrowObj = null;
 
   function key(x, y, z) { return x + ',' + y + ',' + z; }
 
@@ -210,6 +212,59 @@
     }
   }
 
+  // Big curved arrow hovering over a face, showing which way it will spin.
+  // Canonical arrow is drawn in the XY plane indicating counter-clockwise as
+  // seen from +z; we mirror for clockwise and orient/position it per face.
+  function makeArrow(axis, layerSign, ccw) {
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0xffd23f,
+      transparent: true,
+      opacity: 0.95,
+      depthTest: false,
+    });
+    const g = new THREE.Group();
+    const R = 1.15, ARC = 4.0;
+    const torus = new THREE.Mesh(new THREE.TorusGeometry(R, 0.09, 10, 48, ARC), mat);
+    g.add(torus);
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.26, 0.55, 14), mat);
+    cone.position.set(Math.cos(ARC) * R, Math.sin(ARC) * R, 0);
+    cone.rotation.z = ARC;            // cone's +y aligns with the CCW tangent
+    g.add(cone);
+    if (!ccw) g.scale.y = -1;         // mirror = clockwise
+
+    const holder = new THREE.Group();
+    holder.add(g);
+    const d = 1.95;                   // hover just outside the face
+    const HALF = Math.PI / 2;
+    if (axis === 'x') {
+      holder.rotation.y = layerSign > 0 ? HALF : -HALF;
+      holder.position.x = layerSign * d;
+    } else if (axis === 'y') {
+      holder.rotation.x = layerSign > 0 ? -HALF : HALF;
+      holder.position.y = layerSign * d;
+    } else {
+      holder.rotation.y = layerSign > 0 ? 0 : Math.PI;
+      holder.position.z = layerSign * d;
+    }
+    holder.renderOrder = 10;
+    return holder;
+  }
+
+  function removeArrow() {
+    if (!arrowObj) return;
+    cubeGroup.remove(arrowObj);
+    arrowObj.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) o.material.dispose();
+    });
+    arrowObj = null;
+  }
+
+  function setShowArrows(on) {
+    showArrows = !!on;
+    if (!showArrows) removeArrow();
+  }
+
   // Animate one move (e.g. "R", "U'", "F2"). onDone() fires at the end.
   function animateMove(move, duration, onDone) {
     if (animating) { if (onDone) onDone(); return; }
@@ -226,6 +281,14 @@
     const layer = cubies.filter((m) => Math.round(m.position[spec.axis]) === spec.layer);
     for (const m of layer) pivot.add(m); // reparent (keeps world transform)
 
+    // Show which way this face is about to spin (as seen from outside).
+    removeArrow();
+    if (showArrows) {
+      const ccw = total * spec.layer > 0;
+      arrowObj = makeArrow(spec.axis, spec.layer, ccw);
+      cubeGroup.add(arrowObj);
+    }
+
     animating = true;
     const start = performance.now();
     const dur = duration * turns;
@@ -239,6 +302,7 @@
         // Detach cubies back to cubeGroup, then caller repaints from new state.
         for (const m of layer.slice()) cubeGroup.add(m);
         cubeGroup.remove(pivot);
+        removeArrow();
         animating = false;
         if (onDone) onDone();
       }
@@ -264,5 +328,5 @@
     renderer.render(scene, camera);
   }
 
-  global.Cube3D = { init, setState, animateMove, isAnimating, resetView, setPaintMode, setOnPaint, COLORS };
+  global.Cube3D = { init, setState, animateMove, isAnimating, resetView, setPaintMode, setOnPaint, setShowArrows, COLORS };
 })(window);
