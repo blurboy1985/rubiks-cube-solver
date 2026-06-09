@@ -85,6 +85,7 @@
       const idx = +cell.dataset.idx;
       const letter = facelets[idx];
       cell.style.background = colors[letter];
+      cell.dataset.glyph = ({ U: 'W', R: 'R', F: 'G', D: 'Y', L: 'O', B: 'B' })[letter];
       cell.classList.toggle('center', idx in CENTER);
     }
   }
@@ -626,6 +627,7 @@
       sw.style.background = colors[L];
       sw.title = FACE_LABELS[L];
       sw.dataset.letter = L;
+      sw.dataset.glyph = ({ U: 'W', R: 'R', F: 'G', D: 'Y', L: 'O', B: 'B' })[L];
       sw.addEventListener('click', () => {
         paintColor = L;
         for (const c of pal.children) c.classList.toggle('sel', c.dataset.letter === L);
