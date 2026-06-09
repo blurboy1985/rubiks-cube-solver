@@ -38,14 +38,19 @@
   var FACE_BASE = { U: 0, R: 9, F: 18, D: 27, L: 36, B: 45 };
 
   // Precise mode: 6 straight-on faces, anchored to white-up / green-front.
+  // Faces are captured by POSITION, not colour — hold the cube any way you like,
+  // just keep the same grip across all six photos. The app figures out the colour
+  // scheme from the centres, so it doesn't matter which colour is up.
   var PRECISE = [
-    { letter: 'U', name: 'White (Top)',     hold: 'Hold the cube with the <b>WHITE</b> centre on top and <b>GREEN</b> facing you, then tip it BACK so the white top faces the camera. The green edge ends up at the bottom.' },
-    { letter: 'F', name: 'Green (Front)',   hold: 'Look straight at the <b>GREEN</b> centre, with <b>WHITE</b> still on top.' },
-    { letter: 'R', name: 'Red (Right)',     hold: 'Turn the cube LEFT so the <b>RED</b> centre faces you (white stays on top).' },
-    { letter: 'B', name: 'Blue (Back)',     hold: 'Keep turning LEFT so the <b>BLUE</b> centre faces you (white stays on top).' },
-    { letter: 'L', name: 'Orange (Left)',   hold: 'Turn LEFT once more so the <b>ORANGE</b> centre faces you (white stays on top).' },
-    { letter: 'D', name: 'Yellow (Bottom)', hold: 'Back to the start (green facing you, white on top), then tip the cube FORWARD so the <b>YELLOW</b> bottom faces the camera. The green edge ends up at the top.' }
+    { letter: 'U', name: 'Top',    hold: 'Hold the cube any comfortable way and <b>keep that grip for all 6 photos</b>. Tilt it so the <b>TOP</b> face points at the camera — keep the side that faces you at the BOTTOM of the picture.' },
+    { letter: 'F', name: 'Front',  hold: 'Hold it normally again (same top as before) and photograph the face <b>FACING YOU</b>, straight on.' },
+    { letter: 'R', name: 'Right',  hold: 'Turn the whole cube a quarter-turn to the <b>LEFT</b> (same face stays on top). Photograph the new face facing you.' },
+    { letter: 'B', name: 'Back',   hold: 'Quarter-turn <b>LEFT</b> again (top unchanged). Photograph the face now facing you.' },
+    { letter: 'L', name: 'Left',   hold: 'Quarter-turn <b>LEFT</b> once more (top unchanged). Photograph the face now facing you.' },
+    { letter: 'D', name: 'Bottom', hold: 'Face the front again, then tip the cube <b>FORWARD</b> so the <b>BOTTOM</b> points at the camera — keep the side that was facing you at the TOP of the picture.' }
   ];
+  // Friendly position names (the U/R/F/D/L/B keys are positions here, not colours).
+  var POS_NAME = { U: 'Top', R: 'Right', F: 'Front', D: 'Bottom', L: 'Left', B: 'Back' };
 
 
   var COLORS = {};
@@ -120,8 +125,7 @@
   // ---- per-face helpers ----
   function ensureFace(letter) {
     if (!faceColors[letter]) {
-      var a = [null, null, null, null, letter, null, null, null, null];
-      faceColors[letter] = a;
+      faceColors[letter] = [null, null, null, null, null, null, null, null, null];
     }
     return faceColors[letter];
   }
@@ -203,19 +207,20 @@
 
   function renderPanel(letter) {
     var panel = elt('div', 'pw-panel');
+    var data = faceColors[letter];
+    var centerColor = (data && data[4]) ? COLORS[data[4]] : '#cfcfcf';
     var head = elt('div', 'pw-panel-head');
-    head.innerHTML = '<span class="pw-cdot" style="background:' + COLORS[letter] + '"></span>' +
-      cap(LETTER_TO_COLOR[letter]) + ' face';
+    head.innerHTML = '<span class="pw-cdot" style="background:' + centerColor + '"></span>' +
+      POS_NAME[letter] + ' face';
     panel.appendChild(head);
 
     var grid = elt('div', 'pw-grid');
-    var data = faceColors[letter];
     for (var i = 0; i < 9; i++) {
       var cell = elt('div', 'pw-cell');
       cell.dataset.letter = letter; cell.dataset.i = i;
       var L = data ? data[i] : null;
-      if (i === 4) { cell.style.background = COLORS[letter]; cell.classList.add('center'); cell.title = 'Centre — always ' + LETTER_TO_COLOR[letter]; }
-      else if (L) { cell.style.background = COLORS[L]; }
+      if (i === 4) cell.classList.add('center'); // the centre sticker (just a marker now)
+      if (L) { cell.style.background = COLORS[L]; }
       else { cell.classList.add('empty'); }
       cell.addEventListener('click', onCellClick);
       grid.appendChild(cell);
@@ -229,7 +234,6 @@
   function onCellClick(e) {
     var letter = e.currentTarget.dataset.letter;
     var i = +e.currentTarget.dataset.i;
-    if (i === 4) return;
     ensureFace(letter)[i] = activeColor;
     e.currentTarget.classList.remove('empty');
     e.currentTarget.style.background = COLORS[activeColor];
@@ -244,13 +248,19 @@
     back.addEventListener('click', function () { if (step > 0) { step--; renderStep(); } });
     foot.appendChild(back);
 
-    var done = stepComplete(step);
-    var msg = done ? '' : 'Fill every square to continue';
-    foot.appendChild(elt('span', 'pw-spacer', msg));
+    var last = step === steps.length - 1;
+    var hint = '';
+    if (last) {
+      var missing = ['U', 'R', 'F', 'D', 'L', 'B'].filter(function (L) { return !faceFilled(L); });
+      if (missing.length) hint = 'Still need every square on: ' + missing.map(function (L) { return POS_NAME[L]; }).join(', ') + ' (use ◀ Back to fix)';
+    } else if (!stepComplete(step)) {
+      hint = 'Fill every square to continue';
+    }
+    foot.appendChild(elt('span', 'pw-spacer', hint));
 
-    if (step < steps.length - 1) {
+    if (!last) {
       var next = elt('button', 'btn sm btn-solve', 'Next ▶');
-      next.disabled = !done;
+      next.disabled = !stepComplete(step);
       next.addEventListener('click', function () { if (stepComplete(step)) { step++; renderStep(); } });
       foot.appendChild(next);
     } else {
@@ -449,11 +459,10 @@
 
   function singlePrompt(letter) {
     return 'This image shows ONE face of a Rubik\'s cube, filling most of the frame. ' +
-      'Identify the 9 stickers in the 3x3 grid, reading left-to-right, top-to-bottom. ' +
-      'The centre sticker should be ' + LETTER_TO_COLOR[letter] + '. Each colour is exactly ' +
-      'one of: white, yellow, red, orange, green, blue. Pick the nearest for each sticker. ' +
-      'Ignore background, fingers and shadows. Reply ONLY JSON: ' +
-      '{"grid": [["c","c","c"],["c","c","c"],["c","c","c"]]}.';
+      'Identify all 9 stickers in the 3x3 grid, reading left-to-right, top-to-bottom ' +
+      '(including the centre sticker). Each colour is exactly one of: white, yellow, red, ' +
+      'orange, green, blue. Pick the nearest for every sticker. Ignore background, fingers ' +
+      'and shadows. Reply ONLY JSON: {"grid": [["c","c","c"],["c","c","c"],["c","c","c"]]}.';
   }
 
   function runKimi(dataURL, key) {
@@ -494,7 +503,8 @@
       }
       var content = r.j && r.j.choices && r.j.choices[0] && r.j.choices[0].message && r.j.choices[0].message.content;
       if (!applySingle(content, letter)) { setMsg('Kimi\'s answer was unclear — tap any squares to fix the colours.', 'err'); return; }
-      setMsg('✅ Read it! Check the squares and fix any that look wrong.', 'ok');
+      if (!faceFilled(letter)) setMsg('✅ Read it — but a few squares were unclear. Tap the faded ones to set them.', 'ok');
+      else setMsg('✅ Read it! Check the squares and fix any that look wrong.', 'ok');
     }).catch(function (err) {
       busy = false;
       var base = getBase(), direct = base.indexOf('opencode.ai') >= 0;
@@ -518,12 +528,21 @@
     }
     return flat;
   }
+  // Map a colour word (incl. variants like "light blue", "grey") to a facelet letter.
+  function colorToLetter(name) {
+    if (!name) return null;
+    var n = String(name).toLowerCase();
+    if (n.indexOf('white') >= 0 || n.indexOf('grey') >= 0 || n.indexOf('gray') >= 0) return 'U';
+    if (n.indexOf('yellow') >= 0) return 'D';
+    if (n.indexOf('orange') >= 0) return 'L';
+    if (n.indexOf('red') >= 0) return 'R';
+    if (n.indexOf('green') >= 0) return 'F';
+    if (n.indexOf('blue') >= 0) return 'B';
+    return COLOR_TO_LETTER[n.trim()] || null;
+  }
   function assignFace(letter, flat) {
     var d = [];
-    for (var i = 0; i < 9; i++) {
-      if (i === 4) { d.push(letter); continue; }
-      d.push(COLOR_TO_LETTER[flat[i]] || null);
-    }
+    for (var i = 0; i < 9; i++) d.push(colorToLetter(flat[i])); // centre included
     faceColors[letter] = d;
   }
 
@@ -535,7 +554,6 @@
     renderStep();
     return true;
   }
-
 
   // ---- assemble ----
   function finishWizard() {
