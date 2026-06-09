@@ -61,6 +61,9 @@
   function setKey(k) { try { if (k) localStorage.setItem(LS_KEY, k); else localStorage.removeItem(LS_KEY); } catch (e) {} }
   function getBase() { try { return localStorage.getItem(LS_BASE) || DEFAULT_BASE; } catch (e) { return DEFAULT_BASE; } }
   function setBase(u){ try { if (u && u !== DEFAULT_BASE) localStorage.setItem(LS_BASE, u); else localStorage.removeItem(LS_BASE); } catch (e) {} }
+  // When the proxy/endpoint injects the key itself, the browser sends none.
+  function proxyHoldsKey()  { try { return localStorage.getItem('cube.proxyKey') === '1'; } catch (e) { return false; } }
+  function setProxyHoldsKey(b){ try { if (b) localStorage.setItem('cube.proxyKey', '1'); else localStorage.removeItem('cube.proxyKey'); } catch (e) {} }
 
   // ---- entry ----
   function open() {
@@ -376,13 +379,26 @@
     input.placeholder = haveKey ? 'API key saved — leave blank to keep it' : 'sk-...';
     var baseInput = elt('input', 'pw-keyinput pw-baseinput'); baseInput.type = 'text';
     baseInput.placeholder = 'API endpoint'; baseInput.value = getBase();
+
+    // "my proxy holds the key" toggle
+    var proxyLabel = elt('label', 'pw-proxykey');
+    var cb = elt('input'); cb.type = 'checkbox'; cb.checked = proxyHoldsKey();
+    proxyLabel.appendChild(cb);
+    proxyLabel.appendChild(document.createTextNode(' My proxy holds the key (don\'t ask me for one)'));
+    function syncKeyDisabled() { input.disabled = cb.checked; input.placeholder = cb.checked ? 'not needed — your proxy supplies the key' : (haveKey ? 'API key saved — leave blank to keep it' : 'sk-...'); }
+    cb.addEventListener('change', syncKeyDisabled);
+
     var save = elt('button', 'btn sm btn-solve', modeArg === 'settings' ? 'Save' : 'Save & read');
     save.addEventListener('click', function () {
+      var proxy = cb.checked;
+      setProxyHoldsKey(proxy);
       var k = input.value.trim() || getKey();
-      if (!k) { input.focus(); return; }
-      setKey(k); setBase(baseInput.value.trim());
+      if (!proxy && !k) { input.focus(); return; }
+      if (k) setKey(k);
+      setBase(baseInput.value.trim());
       box.parentNode.removeChild(box);
-      if (photos[step]) detect(photos[step]); else setMsg('Saved. Take a photo to read colours.', 'ok');
+      if (photos[step]) detect(photos[step]);
+      else setMsg(proxy ? 'Saved — your proxy supplies the key. Take a photo.' : 'Saved. Take a photo to read colours.', 'ok');
     });
     var test = elt('button', 'btn sm', '🔌 Test');
     test.addEventListener('click', function () { testConnection(input.value.trim() || getKey(), baseInput.value.trim() || getBase()); });
@@ -393,6 +409,8 @@
     });
     row.appendChild(input); row.appendChild(baseInput); row.appendChild(save); row.appendChild(test); row.appendChild(cancel);
     box.appendChild(row);
+    box.appendChild(proxyLabel);
+    syncKeyDisabled();
     var shot = body.querySelector('.pw-shot');
     shot.parentNode.insertBefore(box, shot.nextSibling);
     input.focus();
@@ -405,9 +423,11 @@
       return;
     }
     setMsg('🔌 Testing ' + base + ' …', 'busy');
+    var headers = { 'Content-Type': 'application/json' };
+    if (key) headers['Authorization'] = 'Bearer ' + key;
     fetch(base, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (key || 'none') },
+      headers: headers,
       body: JSON.stringify({ model: KIMI_MODEL, max_tokens: 1, messages: [{ role: 'user', content: 'ping' }] })
     }).then(function (res) {
       return res.text().then(function (t) { return { status: res.status, t: t }; });
@@ -423,6 +443,7 @@
 
   // ---- detection ----
   function detect(dataURL) {
+    if (proxyHoldsKey()) { runKimi(dataURL, ''); return; }
     var key = getKey();
     if (!key) { showKeyBox('auto'); return; }
     runKimi(dataURL, key);
@@ -454,9 +475,11 @@
         ] }
       ]
     };
+    var headers = { 'Content-Type': 'application/json' };
+    if (key) headers['Authorization'] = 'Bearer ' + key;
     fetch(getBase(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+      headers: headers,
       body: JSON.stringify(payload)
     }).then(function (res) {
       return res.json().then(function (j) { return { ok: res.ok, status: res.status, j: j }; });
@@ -464,7 +487,10 @@
       busy = false;
       if (!r.ok) {
         var em = (r.j && r.j.error && (r.j.error.message || r.j.error.type)) || ('HTTP ' + r.status);
-        if (r.status === 401) { setMsg('That API key was rejected — open ⚙︎ to fix it.', 'err'); setKey(''); }
+        if (r.status === 401) {
+          if (proxyHoldsKey()) setMsg('The key stored in your proxy was rejected (HTTP 401). Update the OPENCODE_KEY secret on the Worker.', 'err');
+          else { setMsg('That API key was rejected — open ⚙︎ to fix it.', 'err'); setKey(''); }
+        }
         else setMsg('Kimi could not read this photo (' + em + '). Retake it or tap the squares to fix colours.', 'err');
         return;
       }

@@ -597,3 +597,6 @@ code {
   font-size: 0.9rem; font-weight: 600; color: var(--ink);
 }
 .pw-grid { width: 168px; max-width: 100%; }
+
+.pw-proxykey { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.85rem; color: var(--ink-soft); cursor: pointer; }
+.pw-proxykey input { width: 18px; height: 18px; }
