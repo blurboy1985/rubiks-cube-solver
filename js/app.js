@@ -177,6 +177,27 @@
     return true;
   }
 
+  // Apply a cube scanned from photos: drop the user into paint mode so they can
+  // tweak any sticker, then validate so they know if it's ready to solve.
+  function applyScannedState(str) {
+    if (!isValidStateString(str)) {
+      setStatus('Hmm, those photos didn\'t make a full cube — give it another try.', 'err');
+      return;
+    }
+    stopPlay();
+    clearSolution();
+    facelets = str;
+    el('scrambleText').textContent = '—';
+    if (!paintMode) togglePaint();   // ensure paint mode for easy corrections
+    render();
+    autosave();
+    updateShareUrl();
+    const err = validate(facelets);
+    setStatus(err ? ('📷 Loaded from your photos — ' + err)
+                  : '📷 Loaded from your photos — looks valid! Press Solve it! ✨',
+              err ? 'err' : 'ok');
+  }
+
   function readSaves() {
     try { return JSON.parse(localStorage.getItem(LS_SAVES) || '{}') || {}; }
     catch (e) { return {}; }
@@ -652,6 +673,10 @@
     el('solveBtn').addEventListener('click', requestSolve);
     el('solveBtn').disabled = true;
     el('paintBtn').addEventListener('click', togglePaint);
+    if (window.PhotoWizard) {
+      window.PhotoWizard.init({ colors: window.Cube3D.COLORS, applyState: applyScannedState });
+      el('photoBtn').addEventListener('click', function () { window.PhotoWizard.open(); });
+    }
 
     el('shareBtn').addEventListener('click', shareCube);
     el('saveBtn').addEventListener('click', saveNamed);
