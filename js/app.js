@@ -49,6 +49,7 @@
     const s = el('status');
     s.textContent = text;
     s.className = 'status ' + (kind || '');
+    if (window.Cubie) window.Cubie.onStatus(text, kind || '');
   }
 
   // ---- net editor ----
@@ -137,7 +138,8 @@
     el('scrambleText').textContent = seq;
     render();
     autosave();
-    setStatus('Scrambled — press Solve', '');
+    if (window.Cubie) window.Cubie.wiggle();
+    setStatus('All mixed up! Now press ✨ Solve it!', '');
   }
 
   function reset() {
@@ -595,6 +597,7 @@
       if (!endCelebrated) {
         endCelebrated = true;
         if (typeof window.celebrate === 'function') window.celebrate();
+        if (window.Cubie) window.Cubie.cheer();
         const banner = el('celebrate');
         if (banner) {
           banner.classList.add('show');

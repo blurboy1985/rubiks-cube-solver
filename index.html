@@ -2,13 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Rubik's Cube 3x3 Solver</title>
   <meta name="description" content="Interactive 3D Rubik's Cube solver for kids. Mix up your cube, then watch the magic solve it step by step!" />
+  <meta name="theme-color" content="#8b5cf6" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20260609i" />
+  <link rel="stylesheet" href="css/style.css?v=20260610a" />
 </head>
 <body>
   <div class="blob blob1"></div>
@@ -40,6 +44,11 @@
         <button id="resetBtn" class="btn btn-clear">🧽 Clear</button>
         <button id="paintBtn" class="btn btn-paint">🎨 Paint</button>
         <button id="photoBtn" class="btn btn-photo">📷 Snap from photos</button>
+        <button id="moreBtn" class="btn btn-more" aria-label="More actions">⋯ More</button>
+      </div>
+      <div id="moreSheet" class="more-sheet">
+        <button id="moreClearBtn" class="btn btn-clear">🧽 Clear</button>
+        <button id="morePhotoBtn" class="btn btn-photo">📷 Snap from photos</button>
       </div>
 
       <div id="palette" class="palette"></div>
@@ -115,11 +124,12 @@
 
   <script src="vendor/three.min.js"></script>
   <script src="vendor/cube.js"></script>
-  <script src="js/confetti.js?v=20260609i"></script>
-  <script src="js/cube3d.js?v=20260609i"></script>
-  <script src="js/app.js?v=20260609i"></script>
-  <script src="js/photo.js?v=20260609i"></script>
-  <script src="js/toddler.js?v=20260609i"></script>
+  <script src="js/confetti.js?v=20260610a"></script>
+  <script src="js/cube3d.js?v=20260610a"></script>
+  <script src="js/cubie.js?v=20260610a"></script>
+  <script src="js/app.js?v=20260610a"></script>
+  <script src="js/photo.js?v=20260610a"></script>
+  <script src="js/toddler.js?v=20260610a"></script>
   <script>
     (function () {
       var tabSolver = document.getElementById('tabSolver');
@@ -138,5 +148,32 @@
       }
       tabSolver.addEventListener('click', function () { show('solver'); });
       tabGame.addEventListener('click', function () { show('game'); });
+
+      // Mobile "More" sheet: proxies to the hidden Clear / Photo buttons.
+      var moreBtn = document.getElementById('moreBtn');
+      var moreSheet = document.getElementById('moreSheet');
+      function closeSheet() { moreSheet.classList.remove('open'); }
+      moreBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        moreSheet.classList.toggle('open');
+      });
+      document.getElementById('moreClearBtn').addEventListener('click', function () {
+        closeSheet(); document.getElementById('resetBtn').click();
+      });
+      document.getElementById('morePhotoBtn').addEventListener('click', function () {
+        closeSheet(); document.getElementById('photoBtn').click();
+      });
+      document.addEventListener('click', function (e) {
+        if (moreSheet.classList.contains('open') && !moreSheet.contains(e.target)) closeSheet();
+      });
+
+      // PWA: register the service worker (https / localhost only).
+      if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('sw.js').catch(function () { /* offline support is optional */ });
+        });
+      }
     })();
-  </script
+  </script>
+</body>
+</html>
